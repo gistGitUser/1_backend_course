@@ -1,0 +1,11 @@
+
+Simple Bank
+
+
+ * create and manage account
+    - owner, balance, currency
+ * record all balance changes
+    - create an account entry for each change
+ * Money transfer transaction
+    -perform money transaction between 2 accounts
+     consistently within transaction  
