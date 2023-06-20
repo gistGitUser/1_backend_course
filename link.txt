@@ -1,1 +1,9 @@
 https://www.youtube.com/watch?v=rx6CPDK_5mU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE
+
+
+grpc course
+https://www.youtube.com/watch?v=2Sm_O75I7H0&list=PLy_6D98if3UJd5hxWNfAqKMr15HZqFnqf
+
+
+ migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose
+

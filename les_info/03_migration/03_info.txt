@@ -1,0 +1,17 @@
+
+
+//для инициализации файлов миграции (up и down)
+//после создания заполняем их
+migrate create -ext sql -dir project/migration/ -seq init_sch
+
+docker exec -it backend_corse_postgres /bin/sh
+createdb --username=back --owner=back back_db
+psql -U back back_db
+dropdb -U back back_db
+
+
+на основе этих команд будет сделан make файл
+
+для миграции данных нужно прописать такую команду и не забыть в конце прописать UP
+
+migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose up
