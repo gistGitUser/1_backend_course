@@ -1,0 +1,7 @@
+
+//для тестов
+go get github.com/stretchr/testify
+
+//для оценки покрытия тестами
+ go test -coverprofile="cover"
+ go test ./... -coverprofile="cover"

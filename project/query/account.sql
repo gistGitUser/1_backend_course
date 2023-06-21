@@ -20,9 +20,9 @@ limit $1
 offset $2;
 
 
--- name: UpdateAccount :exec
+-- name: UpdateAccount :one
 UPDATE accounts SET balance = $2
-WHERE id = $1;
-
--- name: DeleteAuthor :exec
+WHERE id = $1
+RETURNING *;
+-- name: DeleteAccount :exec
 DELETE FROM accounts WHERE id = $1;

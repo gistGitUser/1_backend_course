@@ -18,7 +18,9 @@ docker exec -i backend_corse_postgres psql -U back -d back < first_les_migr.sql
 
 //для подключения к контейнеру
 //https://stackoverflow.com/questions/37694987/connecting-to-postgresql-in-a-docker-container-from-outside
-psql -U postgres -h localhost -p 5000
+docker exec -it backend_corse_postgres createdb --username=back --owner=back back
+docker exec -it backend_corse_postgres createdb --username=back --owner=back jarm_test
+psql -U back -h localhost -p 987
 
 
 //для чтения
