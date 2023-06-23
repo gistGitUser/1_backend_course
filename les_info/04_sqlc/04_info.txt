@@ -47,3 +47,6 @@ https://docs.sqlc.dev/en/latest/reference/query-annotations.html
 :many  - The generated method will return a slice of records via QueryContext.
 :exec  - The generated method will return the error from ExecContext.
          (ExecContext executes a query without returning any rows. )
+
+
+psql -U back -h localhost -p 9876
