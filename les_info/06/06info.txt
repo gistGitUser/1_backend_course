@@ -1,0 +1,19 @@
+ACID
+
+A(Atomicity) - Either all operation complete successfully or
+the transaction fails and the db is unchanged
+
+C(consistency) - The db state must be valid after the transaction.
+All constraints must be satisfied.
+
+I(isolation) - Concurrent transactions must not affect each other.
+
+D(Durability) - Data written by a successful transaction must be recorded in
+persistent storage.
+
+How to run sql tx?
+
+START;
+...
+COMMIT; or ROLLBACK;
+

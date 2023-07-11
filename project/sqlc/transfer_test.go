@@ -50,3 +50,28 @@ func TestGetTransfer(t *testing.T) {
 	require.WithinDuration(t, transfer1.CreatedAt, transfer2.CreatedAt, time.Second)
 
 }
+
+func TestGetTransfers(t *testing.T) {
+	acc := CreateRandomAccount(t)
+	acc2 := CreateRandomAccount(t)
+
+	for i := 0; i < 10; i++ {
+		createRandomTransfer(t, acc, acc2)
+	}
+
+	params := ListTransfersParams{
+		FromAccountID: acc.ID,
+		ToAccountID:   acc2.ID,
+		Limit:         5,
+		Offset:        5,
+	}
+
+	entries, err := testQueries.ListTransfers(context.Background(), params)
+	require.NoError(t, err)
+	require.Len(t, entries, 5)
+
+	for _, account := range entries {
+		require.NotEmpty(t, account)
+	}
+
+}
