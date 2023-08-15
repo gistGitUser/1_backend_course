@@ -15,7 +15,7 @@ where id = $1 limit 1;
 -- name: GetAccountForUpdate :one
 select * from accounts
 where id = $1 limit 1
-FOR UPDATE;
+FOR no key UPDATE;
 
 -- как обходится лимит с 0 и офсетом 0
 -- name: ListAccounts :many
@@ -29,5 +29,12 @@ offset $2;
 UPDATE accounts SET balance = $2
 WHERE id = $1
 RETURNING *;
+
+-- name: AddAccountBalance :one
+UPDATE accounts
+SET balance = balance + sqlc.arg(amount)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
 -- name: DeleteAccount :exec
 DELETE FROM accounts WHERE id = $1;

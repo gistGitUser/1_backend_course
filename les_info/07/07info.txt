@@ -28,3 +28,229 @@ select * from ... where id = 1 FOR UPDATE;
 select * from accounts
 where id = $1 limit 1
 FOR UPDATE;
+
+примерный код того что происходит в гошной транзакции
+
+BEGIN;
+
+Insert INTO transfers (from_account_id,to_account_id,amount) VALUES (1,2,10) returning *;
+
+insert into entries (account_id,amount) values (1,-10) returning *;
+insert into entries (account_id,amount) values (2,10) returning *;
+
+select * from accounts where id = 1 for update;
+update accounts set balance = 90 where id = 1 returning *;
+
+select * from accounts where id = 2 for update;
+update accounts set balance = 110 where id = 2 returning *;
+
+ROLLBACK;
+
+
+
+**Первый клиент
+back_db=# BEGIN;
+BEGIN
+back_db=*# Insert INTO transfers (from_account_id,to_account_id,amount) VALUES (1,2,10) returning *;
+ id | from_account_id | to_account_id | amount |          created_at
+----+-----------------+---------------+--------+-------------------------------
+ 18 |               1 |             2 |     10 | 2023-07-18 12:12:46.143883+00
+(1 row)
+
+INSERT 0 1
+back_db=*# insert into entries (account_id,amount) values (1,-10) returning *;
+ id | account_id | amount |          created_at
+----+------------+--------+-------------------------------
+ 23 |          1 |    -10 | 2023-07-18 12:12:46.143883+00
+(1 row)
+
+INSERT 0 1
+
+** 2 клиент
+
+back_db=# begin;
+BEGIN
+back_db=*# Insert INTO transfers (from_account_id,to_account_id,amount) VALUES (1,2,10) returning *;
+ id | from_account_id | to_account_id | amount |          created_at
+----+-----------------+---------------+--------+-------------------------------
+ 19 |               1 |             2 |     10 | 2023-07-18 12:13:52.160728+00
+(1 row)
+
+INSERT 0 1
+back_db=*# insert into entries (account_id,amount) values (2,10) returning *;
+ id | account_id | amount |          created_at
+----+------------+--------+-------------------------------
+ 24 |          2 |     10 | 2023-07-18 12:13:52.160728+00
+(1 row)
+
+INSERT 0 1
+back_db=*#
+
+
+После этих действий пытаемся сделать это на 1
+клиенте и получаем лок на селект
+
+back_db=*# select * from accounts where id = 1 for update;
+
+после этого идём сюда (вики по постгресу)
+https://wiki.postgresql.org/wiki/Lock_Monitoring
+
+берём такой запрос
+
+ SELECT blocked_locks.pid     AS blocked_pid,
+         blocked_activity.usename  AS blocked_user,
+         blocking_locks.pid     AS blocking_pid,
+         blocking_activity.usename AS blocking_user,
+         blocked_activity.query    AS blocked_statement,
+         blocking_activity.query   AS current_statement_in_blocking_process
+   FROM  pg_catalog.pg_locks         blocked_locks
+    JOIN pg_catalog.pg_stat_activity blocked_activity  ON blocked_activity.pid = blocked_locks.pid
+    JOIN pg_catalog.pg_locks         blocking_locks
+        ON blocking_locks.locktype = blocked_locks.locktype
+        AND blocking_locks.database IS NOT DISTINCT FROM blocked_locks.database
+        AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+        AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+        AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+        AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+        AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+        AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+        AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+        AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+        AND blocking_locks.pid != blocked_locks.pid
+
+    JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+   WHERE NOT blocked_locks.granted;
+
+делаем запрос и получаем такой результат, где получаем заблокированные
+транзакции
+
+"blocked_pid"	"blocked_user"	"blocking_pid"	"blocking_user"	"blocked_statement"	"current_statement_in_blocking_process"
+97	"back"	90	"back"	"select * from accounts where id = 1 for update;"	"insert into entries (account_id,amount) values (2,10) returning *;"
+
+и по сути мы получили ситуацию, когда мы получили блокировку между 2-мя
+разными таблиц
+
+чтобы понять почему инсерт блокирует селект нужно почитать дальше
+и дойти до запроса, который покажет все локи в бд
+
+
+SELECT a.datname,
+         l.relation::regclass,
+         l.transactionid,
+         l.mode,
+         l.GRANTED,
+         a.usename,
+         a.query,
+         a.query_start,
+         age(now(), a.query_start) AS "age",
+         a.pid
+FROM pg_stat_activity a
+JOIN pg_locks l ON l.pid = a.pid
+ORDER BY a.query_start;
+
+модифицируем запрос
+SELECT a.datname,
+-- добавить имя приложения
+		 a.application_name,
+-- 		 имя таблицы
+         l.relation::regclass,
+         l.transactionid,
+         l.mode,
+		 l.locktype,
+         l.GRANTED,
+         a.usename,
+         a.query,
+         age(now(), a.query_start) AS "age",
+         a.pid
+FROM pg_stat_activity a
+JOIN pg_locks l ON l.pid = a.pid
+ORDER BY a.pid;
+
+
+нас будет интересовать только  psql в столбце application_name
+
+после запроса видим что только 1 строка это false в колонке granted
+т.к. она пытается получить shareLock тип transactionid (1497 в моём случае)
+а на этой транзакции висит ExclusiveLock
+от другого процесса, который делает insert
+
+если посмотреть на схему, то взаимосвязь между accounts и transfers
+есть только в одном месте, где мы добавляем foreign key от
+transfers к accounts
+
+поэтому любой апдейт id аккаунта повлияет на целостность foreign key
+
+и соотвественно из-за этого мы должны вешать лок, чтобы убеждаться
+в consistency(согласованности данных)
+
+**4 сделаем несколько других действий на 2 клиенте и получим дедлок
+INSERT 0 1
+back_db=*# insert into entries (account_id,amount) values (1,-10) returning *;
+ id | account_id | amount |          created_at
+----+------------+--------+-------------------------------
+ 25 |          1 |    -10 | 2023-07-18 12:13:52.160728+00
+(1 row)
+
+INSERT 0 1
+back_db=*# select * from accounts where id = 2 for update;
+ERROR:  deadlock detected
+DETAIL:  Process 90 waits for ShareLock on transaction 1496; blocked by process 97.
+Process 97 waits for ShareLock on transaction 1497; blocked by process 90.
+HINT:  See server log for query details.
+CONTEXT:  while locking tuple (0,2) in relation "accounts"
+back_db=!#
+
+
+самый простой способ это убрать foreign key
+
+но есть способ получше, т.к. fk относится только к id а обновлять
+нам нужно только баланс(т.е. id никогда не изменится при update)
+в постгрес это делается очень просто, достаточно просто заменить
+FOR UPDATE на FOR no key UPDATE;
+
+select * from accounts
+where id = $1 limit 1
+FOR no key UPDATE;
+
+Теперь про саму методику выялвления дедлоков
+
+Про дедлок обычно говорит сама система
+                Error Trace:    /home/mos/Documents/1_backend_course/project/sqlc/store_test.go:41
+                Error:          Received unexpected error:
+                                pq: deadlock detected
+                Test:           TestTransferTX
+
+И показывает в какой транзакции был дедлок, затем можно переписать код транзакции на sql и начать выявлять уже путем
+анализа в более удобном клиенте и повторять то что мы делали здесь
+
+В функции func (store *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
+
+мы изменяем баланс аккаунта при помощи двух операций,
+
+
+		account2, err := q.GetAccountForUpdate(ctx, arg.ToAccountID)
+		if err != nil {
+			return err
+		}
+
+		result.ToAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
+			ID:      arg.ToAccountID,
+			Balance: account2.Balance + arg.Amount,
+		})
+
+но по сути мы можем сделать это при помощи одной операции
+
+создаём новый запрос для sqlc
+
+-- name: AddAccountBalance :one
+UPDATE accounts
+SET balance = balance + $2
+WHERE id = $1
+RETURNING *;
+
+
+
+
+
+
+
