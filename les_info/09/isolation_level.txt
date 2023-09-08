@@ -1,0 +1,66 @@
+https://habr.com/ru/articles/555920/
+https://gb.ru/posts/acid_cap_transactions
+ACID property (4 properties of db transaction)
+
+Atomicity - either all operation complete succesfully
+or the transaction fails and the db is unchanged.
+
+Consistency - the db state must be valid after tge transaction.
+All constraint must be satisfied.
+
+Isolation - concurrent transaction must not affect each other.
+
+Durability - data written by a successful transaction must be recorded in
+persist storage.
+
+
+Read phenomena
+
+ * dirty read - a transaction reads data written by other concurrent
+   uncommitted transaction
+ * non-repeatable read - a transaction reads the same row twice and sees
+   different value because it has been modified by other committed transaction
+
+ * phantom read - a transaction re-executes a query to find rows that satisfy
+   a condition and sees a different set of rows, due to changes by other commited
+   transaction.
+
+ * serialization anomaly - the result of a group of concurrent committed transaction
+   is impossible to achieve if we try to run them
+   sequentially in any order without overlapping.
+
+
+4 standards of isolation levels
+
+1) Read uncommitted -> can see data written by uncommitted transaction
+allows:
+
+ * phantom read
+ * non-repeatable read
+ * serialization anomaly
+
+2) Read committed - only see data written by committed transaction
+     * phantom read
+     * non-repeatable read
+     * serialization anomaly
+
+3) Repeatable read - same query read query always return the same result
+    * serialization anomaly
+4) serializable - can achieve the same result if execute transaction serially
+in some order instead of concurrently
+    * no one
+
+//postgres show lvl isolation
+show transaction_isolation;
+
+/*
+in postgres u can set isolation level only for certain transaction
+i.e. in mysql u can set transaction for whole session
+
+ERROR:  SET TRANSACTION ISOLATION LEVEL must be called BEFORE any query
+*/
+
+begin;
+set transaction isolation level read uncommited;
+
+https://www.youtube.com/watch?v=4EajrPgJAk0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=9
