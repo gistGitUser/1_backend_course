@@ -1,0 +1,211 @@
+/*
+in postgres u can set isolation level only for certain transaction
+i.e. in mysql u can set transaction for whole session
+
+ERROR:  SET TRANSACTION ISOLATION LEVEL must be called BEFORE any query
+*/
+
+1) type in two parralel session
+
+begin;
+set transaction isolation level read uncommitted;
+
+
+2) in first session
+
+select * from accounts limit 3;
+
+
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     705 | EUR      | 2023-09-09 09:22:50.014217+00
+  2 | zpfxnc |     526 | EUR      | 2023-09-09 09:22:50.069521+00
+  3 | lfijyz |     298 | USD      | 2023-09-09 09:22:50.079236+00
+
+
+//second session
+select * from accounts where id = 1;
+
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     705 | EUR      | 2023-09-09 09:22:50.014217+00
+
+//first
+
+update accounts set balance = balance - 10 where id = 1 returning *;
+
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     695 | EUR      | 2023-09-09 09:22:50.014217+00
+(1 row)
+
+//second
+select * from accounts where id = 1;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     705 | EUR      | 2023-09-09 09:22:50.014217+00
+
+
+//in read uncommitted lvl we must see that balance changed
+but if read postgres docs we look that read uncommitted implemented
+the same behaviour that read commited
+
+so basically postgres have only 3 isolation level
+
+//first
+commit;
+
+//second
+select * from accounts where id = 1;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     695 | EUR      | 2023-09-09 09:22:50.014217+00
+
+commit;
+############## Read committed
+//in both session
+begin;
+set transaction isolation level read committed;
+
+//first
+update accounts set balance = balance - 10 where id = 1 returning *;
+
+//second
+select * from accounts where id = 1;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     695 | EUR      | 2023-09-09 09:22:50.014217+00
+
+//first
+commit
+
+//second
+select * from accounts where id = 1;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     685 | EUR      | 2023-09-09 09:22:50.014217+00
+
+** dirty read is impossible (when read data from not committed transaction
+** is phantom read example
+
+//for both
+commit;
+
+
+############## Repeatable Read
+//in both session
+begin;
+set transaction isolation level repeatable read;
+//if wanna check
+ show transaction isolation level;
+
+//first
+update accounts set balance = balance - 10 where id = 1 returning *;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     665 | EUR      | 2023-09-09 09:22:50.014217+00
+
+//second
+select * from accounts where id = 1;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     675 | EUR      | 2023-09-09 09:22:50.014217+00
+
+//first
+commit;
+
+//second
+select * from accounts where id = 1;
+ id | owner  | balance | currency |          created_at
+----+--------+---------+----------+-------------------------------
+  1 | gxscnr |     675 | EUR      | 2023-09-09 09:22:50.014217+00
+
+
+* non-repeatable read - one transaction change data and committed
+but other transaction read old data
+
+
+//second
+update accounts set balance = balance - 10 where id = 1 returning *;
+
+// ERROR:  could not serialize access due to concurrent update
+
+
+############## Repeatable Read (second)
+//in both session
+begin;
+set transaction isolation level repeatable read;
+//first
+
+ select sum(balance) from accounts;
+
+  sum
+-------
+ 12828
+
+insert into accounts(owner, balance, currency) values ('sum',270,'USD');
+
+select sum(balance) from accounts;
+  sum
+-------
+ 13098
+
+//second
+select sum(balance) from accounts;
+
+ sum
+-------
+ 12828
+
+
+insert into accounts(owner, balance, currency) values ('sum',270,'USD');
+
+select sum(balance) from accounts;
+  sum
+-------
+ 13098
+
+//for both
+commit;
+
+//from any session
+select sum(balance) from accounts;
+
+select sum(balance) from accounts;
+  sum
+-------
+ 13368
+
+** serialization anomaly example
+
+we must have one transaction 270 USD
+and other with 570 USD but not two with 270 USD
+
+select * from accounts where balance = 270 ;
+ id | owner | balance | currency |          created_at
+----+-------+---------+----------+-------------------------------
+ 28 | sum   |     270 | USD      | 2023-09-09 09:51:57.260767+00
+ 29 | sum   |     270 | USD      | 2023-09-09 09:51:59.84494+00
+
+
+############## Serialization (second)
+//in both session
+begin;
+set transaction isolation level serializable;
+
+//first
+insert into accounts(owner, balance, currency) values ('sum',810,'USD');
+select * from accounts where balance = 810 ;
+
+//second
+insert into accounts(owner, balance, currency) values ('sum',810,'USD');
+select * from accounts where balance = 810 ;
+
+//first
+commit;
+//second
+commit;
+
+ERROR:  could not serialize access due to read/write dependencies among transactions
+DETAIL:  Reason code: Canceled on identification as a pivot, during commit attempt.
+HINT:  The transaction might succeed if retried.

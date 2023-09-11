@@ -18,6 +18,7 @@ Read phenomena
 
  * dirty read - a transaction reads data written by other concurrent
    uncommitted transaction
+
  * non-repeatable read - a transaction reads the same row twice and sees
    different value because it has been modified by other committed transaction
 
@@ -34,7 +35,7 @@ Read phenomena
 
 1) Read uncommitted -> can see data written by uncommitted transaction
 allows:
-
+ * dirty read (only in mysql)
  * phantom read
  * non-repeatable read
  * serialization anomaly
@@ -53,14 +54,4 @@ in some order instead of concurrently
 //postgres show lvl isolation
 show transaction_isolation;
 
-/*
-in postgres u can set isolation level only for certain transaction
-i.e. in mysql u can set transaction for whole session
 
-ERROR:  SET TRANSACTION ISOLATION LEVEL must be called BEFORE any query
-*/
-
-begin;
-set transaction isolation level read uncommited;
-
-https://www.youtube.com/watch?v=4EajrPgJAk0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=9
