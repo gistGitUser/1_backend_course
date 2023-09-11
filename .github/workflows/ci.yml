@@ -16,6 +16,30 @@ jobs:
     name: Test
     # image for run and build
     runs-on: ubuntu-latest
+
+    # It is needed for successful test running in github
+    # CI https://docs.github.com/en/actions/using-containerized-services/creating-postgresql-service-containers
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgres:14
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: back
+          POSTGRES_USER: back
+          POSTGRES_DB: back_db
+        ports:
+        # Maps tcp port 9876 on service container to the host
+          - 9876:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5    
+
     # workflow tests
     steps:
       # check out code into the go mod dir
@@ -29,6 +53,9 @@ jobs:
 #      when test runs
 #      - name: Build
 #        run: go build -v ./...
+
+      - name: Run migration
+        run: make migrateup
 
       - name: Test
         run: make test
