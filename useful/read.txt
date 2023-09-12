@@ -1,0 +1,2 @@
+//about validation in go
+https://pkg.go.dev/github.com/go-playground/validator

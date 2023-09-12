@@ -15,3 +15,5 @@ packages:
       emit_interface: false
 #     map the table accounts to struct Accounts
       emit_exact_table_names: false
+#     need for returning empty slice and not null vals
+      emit_empty_slices: true
