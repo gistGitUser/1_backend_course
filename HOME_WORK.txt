@@ -2,3 +2,11 @@
 
 5 les)
 дописать тесты для transfer
+
+чтение про
+
+remote config system
+
+etcd or consul
+
+read about viper

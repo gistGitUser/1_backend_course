@@ -2,22 +2,21 @@ package db
 
 import (
 	"database/sql"
+	"github.com/gistGitUser/course/project/util"
 	_ "github.com/lib/pq"
 	"log"
 	"testing"
-)
-
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://back:back@localhost:9876/back_db?sslmode=disable"
 )
 
 var testQueries *Queries
 var testDB *sql.DB
 
 func TestMain(m *testing.M) {
-	var err error
-	testDB, err = sql.Open(dbDriver, dbSource)
+	config, err := util.LoadConfig("../")
+	if err != nil {
+		log.Fatal(err)
+	}
+	testDB, err = sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal(err)
 	}
