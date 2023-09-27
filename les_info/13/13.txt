@@ -1,0 +1,30 @@
+
+why moc database?
+
+* independet tests
+isolate tests data to avoid conflicts
+
+* faster tests
+Reduce a lot of time talking to the db
+all actions will be perform in memory
+
+How to mock
+
+1) create fake db in memory
+
+2) use db stubs (заглушки)
+ generate and build stubs that returns
+ hard-coded values
+
+Для работы с моками мы должны использовать интерфейсы
+поэтому нужно превратить Store в интерфейс
+
+mockgen -package mockdb -destination project/mock/store.go github.com/gistGitUser/course/project/sqlc Store
+
+
+go tool cover -func=coverage.out
+go tool cover -html=coverage.out
+
+
+
+

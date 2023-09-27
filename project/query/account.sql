@@ -17,7 +17,7 @@ select * from accounts
 where id = $1 limit 1
 FOR no key UPDATE;
 
--- как обходится лимит с 0 и офсетом 0
+
 -- name: ListAccounts :many
 select * from accounts
 order by id

@@ -18,6 +18,10 @@ migrateup:
 migratedown:
 	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose down
 
+mock:
+	mockgen -package mockdb -destination project/mock/store.go github.com/gistGitUser/course/project/sqlc Store
+
+
 sqlc:
 	sqlc generate
 

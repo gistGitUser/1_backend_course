@@ -12,7 +12,8 @@ packages:
 #      for prepared query
       emit_prepared_queries: true
 #      useful for mocking database
-      emit_interface: false
+#      if u don't use mock set false
+      emit_interface: true
 #     map the table accounts to struct Accounts
       emit_exact_table_names: false
 #     need for returning empty slice and not null vals

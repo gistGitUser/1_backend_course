@@ -1,2 +1,5 @@
 //about validation in go
 https://pkg.go.dev/github.com/go-playground/validator
+
+//about mysql
+https://www.youtube.com/@PlanetScale/playlists
