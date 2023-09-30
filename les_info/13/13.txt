@@ -19,11 +19,100 @@ How to mock
 Для работы с моками мы должны использовать интерфейсы
 поэтому нужно превратить Store в интерфейс
 
+Для начала в sqlc.yaml ставим emit_interface,
+чтобы появился отдельный файл с интерфейсом в котором
+будут реализованы все наши методы
+
+#      useful for mocking database
+#      if u don't use mock set false
+      emit_interface: true
+
+затем заменяем старый Store на
+
+type Store interface {
+	Querier
+	TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
+}
+
+а старый Store будет теперь выглядеть так
+
+// SQLStore provides functions for db tx
+type SQLStore struct {
+	*Queries
+	db *sql.DB
+}
+
+go install go.uber.org/mock/mockgen@latest
+
+mockgen имеет 2 режима
+
+source mode - генерит мок интерфейс из срц файла
+
+reflect mode генерит мок интерйес при помощи рефлексии
+
+-package настраивает имя пакета
+-destination выходной файл
+
 mockgen -package mockdb -destination project/mock/store.go github.com/gistGitUser/course/project/sqlc Store
 
+в сгенеренном файле будет 2 важные структуры
 
+MockStore - реализует все требуемые функции для интерфейса Store
+MockStoreMockRecorder - build stub and specify how name times
+function should be called
+
+// A Controller represents the top-level control of a mock ecosystem.  It
+// defines the scope and lifetime of mock objects, as well as their
+// expectations.  It is safe to call Controller's methods from multiple
+// goroutines. Each test should create a new Controller and invoke Finish via
+// defer.
+
+Для начала в мок тесте создаём это
+
+ctrl := gomock.NewController(t)
+defer ctrl.Finish()
+
+store := mockdb.NewMockStore(ctrl)
+tc.buildStubs(store)
+
+i.e. build stubs func looks like
+
+func(store *mockdb.MockStore) {
+//EXPECT returns an object that allows the caller to indicate expected use.
+				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(account.ID)).
+					Times(1).Return(account, nil)
+			}
+
+
+Соответственно как работает мок, сначала создаются данные для вывзываемой функции
+во внутреннем хранилище создаются аргументы, которые при определенных входнх значениях
+должны возвращать эти резутаты. В примере выше мы указываем что от функции GetAccount
+в случае если аргумент равен account.ID то мы дожны вернуть account и nil
++ такого теста что нам не нужна БД
+
+далее мы создаём тестовый сервер, гле заменяем бд
+хранлище на моковое хранилище
+			//start test server
+			//сюда мы передаём наше хранилище, где будем
+			//вызывать наши функции
+			server := NewServer(store)
+
+//go test -coverprofile cover.out
+go test -coverprofile cover.out ./...
+
+
+go test -coverprofile cover.out
 go tool cover -func=coverage.out
 go tool cover -html=coverage.out
+
+создаём main_test.go, чтобы лучше видеть результаты запросов в gin
+
+func TestMain(m *testing.M) {
+
+	gin.SetMode(gin.TestMode)
+
+	m.Run()
+}
 
 
 

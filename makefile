@@ -1,5 +1,3 @@
-
-
 postgres:
 	docker run --name backend_corse_postgres -e POSTGRES_PASSWORD=back -e POSTGRES_USER=back -p 9876:5432 -d postgres:14.8-alpine
 
@@ -21,12 +19,21 @@ migratedown:
 mock:
 	mockgen -package mockdb -destination project/mock/store.go github.com/gistGitUser/course/project/sqlc Store
 
+test-coverage:
+	go clean -testcache
+	go test -coverprofile cover.out ./...
+
+test-coverage-view:
+	go clean -testcache
+	go test -coverprofile coverage.out ./...
+	go tool cover -html=coverage.out
 
 sqlc:
 	sqlc generate
 
 test:
-	 go test -v -cover ./...
+	go clean -testcache
+	go test -v -cover ./...
 
 server:
 	cd project; go run main.go

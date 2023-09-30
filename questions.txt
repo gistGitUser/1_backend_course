@@ -3,3 +3,8 @@
 
 
 2) Описание транзакций https://www.youtube.com/watch?v=JNIjlm6iBa8
+
+3) TestCreateAccountApi - есть вопросы по тому
+как работают моки, т.к. непонятно почему
+в случае с invalid currency times(0) и ничего
+не возвращается, хотя на самом деле это не так
