@@ -1,8 +1,7 @@
 
-просмотреть урок еще раз
+https://www.youtube.com/watch?v=D4VtNC3vQUs&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=16
 
-https://www.youtube.com/watch?v=rL0aeMutoJ0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE&index=14
-
+написать тесты для transfer API
 
 git
 

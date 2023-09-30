@@ -1,0 +1,6 @@
+
+//подумать как красиво можно оформить ошибки такого вида
+// в виде переменных или функций
+	if account.Currency != currency {
+		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", account.ID, account.Currency)
+	}

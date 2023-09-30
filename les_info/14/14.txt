@@ -1,0 +1,66 @@
+
+
+Если в коде нужно использовать валидаторы для структур, то
+стандартных валидаторов не всегда достаточно, например
+в данном случае oneof удобно использовать для 2 трех значений,
+но если понадобится расшириться до 10+, то это будет неудобно
+поддерживать
+
+type transferRequest struct {
+	Currency      string `json:"currency" binding:"required,oneof=USD EUR CAD"`
+}
+
+соответственно стоит написать свой кастомный валидатор
+
+1) импортируем "github.com/go-playground/validator/v10"
+
+2) создаём переменную с валидатором
+validCurrency validator.Func = func(level validator.FieldLevel) bool {}
+
+3) внутри пишем код валидации
+
+	if currency, ok := level.Field().Interface().(string); ok {
+		return util.IsSupportedCurrency(currency)
+	}
+	return false
+
+import (
+	"github.com/gistGitUser/course/project/util"
+	"github.com/go-playground/validator/v10"
+)
+
+
+
+var validCurrency validator.Func = func(level validator.FieldLevel) bool {
+	if currency, ok := level.Field().Interface().(string); ok {
+		return util.IsSupportedCurrency(currency)
+	}
+	return false
+
+}
+
+
+
+
+4) 	// Field returns current field for validation
+   	Field() reflect.Value
+
+   	соотвественно т.к. Field это reflect.Value то вызываем Interface и
+   	конвертируем его в нужное значение
+
+
+5) для gin - преобразуем его валидатор в стандартный
+и регистриуем в нём новый валидатор как currency
+
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		err := v.RegisterValidation("currency", validCurrency)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+6) Устанавливаем в наших структарах новый валидатор
+type createAccountRequest struct {
+	Owner    string `json:"owner" binding:"required"`
+	Currency string `json:"currency" binding:"required,currency"`
+}
