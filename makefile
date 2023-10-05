@@ -13,8 +13,14 @@ dropdb:
 migrateup:
 	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose up
 
+migrateup1:
+	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose up 1
+
 migratedown:
 	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose down
+
+migratedown1:
+	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose down 1
 
 mock:
 	mockgen -package mockdb -destination project/mock/store.go github.com/gistGitUser/course/project/sqlc Store

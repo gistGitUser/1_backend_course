@@ -1,0 +1,74 @@
+
+Для начала создаём новую таблицу
+
+CREATE TABLE "users" (
+ "username" varchar PRIMARY KEY,
+ "hashed_password" varchar NOT NULL,
+ "full_name" varchar NOT NULL,
+ "email" varchar UNIQUE NOT NULL,
+ "password_changed_at" timestamptz NOT NULL DEFAULT('0001-01-01 00:00:00+00'),
+ "created_at" timestamptz NOT NULL DEFAULT (now())
+);
+
+чтобы установить новое дефолтное значение в таблицу можно использовать такую запись
+"password_changed_at" timestamptz NOT NULL DEFAULT('0001-01-01 00:00:00+00')
+
+
+посмотреть какие индексы есть у таблицы
+затем добавляем foreign key
+
+ALTER TABLE "accounts" ADD FOREIGN KEY ("owner") REFERENCES "users" ("username");
+
+подразумевается, что вы можете иметь несколько аккаунтов, например
+owner - USD
+owner - EUR
+
+для этого можем создать ограничение, при котором будет сразу создан
+компонентный unizue index
+
+--create create unique index on "accounts" ("owner","currency");
+-- создание такой зависимости автоматически создаёт композитный индекс выше
+ALTER TABLE "accounts" ADD CONSTRAINT "owner_currency_key" UNIQUE ("owner", "currency");
+
+Код выше не стоит просто добавлять в БД, т.к. в проде такое не стоит
+делать из-за того что могут быть откаты на прошлые версии,
+поэтому нужно использовать тулзу для миграций
+
+Соотвественно создаём новую миграцию
+migrate create -ext sql -dir project/migration/ -seq add_users
+
+в файл с созданием добавляем код для таблицы, FK и constraint unique
+
+этим запросом можно посмотреть какие есть индексы у таблицы
+
+SELECT
+    tablename,
+    indexname,
+    indexdef
+FROM
+    pg_indexes
+WHERE
+    schemaname = 'public'
+AND
+    tablename = 'users';
+
+Для migr down можно использовать такой код, в котором мы сначала удаляем
+un constr, fk и таблицу
+
+ALTER TABLE IF EXISTS "accounts" DROP CONSTRAINT IF EXISTS "owner_currency_key";
+
+ALTER TABLE IF EXISTS "accounts" DROP CONSTRAINT IF EXISTS "accounts_owner_fkey";
+
+DROP TABLE IF EXISTS "users";
+
+
+
+тулза для миграции позволяет накатывать/откатывать не все миграции сразу,
+а только частично для этого после команды up/down нужно поставить число,
+которое укажет сколько версий миграции нужно накатить/откатить
+
+migrateup1:
+	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose up 1
+
+migratedown1:
+	migrate -path project/migration -database "postgresql://back:back@localhost:9876/back_db?sslmode=disable" -verbose down 1
