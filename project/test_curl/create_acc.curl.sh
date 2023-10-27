@@ -1,2 +1,2 @@
 curl -X POST localhost:8080/accounts -d \
- '{"owner": "Quang Pham", "currency": "USD" }'
+ '{"owner": "lkgyhk", "currency": "USD" }'

@@ -12,7 +12,7 @@ import (
 
 func main() {
 
-	config, err := util.LoadConfig("/home/q/2023_books_and_article/!COURSES/1_backend_course/project")
+	config, err := util.LoadConfig(".")
 	if err != nil {
 		log.Fatal("can't load config:", err)
 	}

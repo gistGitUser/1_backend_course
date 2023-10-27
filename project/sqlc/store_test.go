@@ -19,7 +19,6 @@ func TestTransferTX(t *testing.T) {
 
 	errs := make(chan error)
 	results := make(chan TransferTxResult)
-	fmt.Println(">> before:", account1.Balance, account2.Balance)
 
 	for i := 0; i < n; i++ {
 		txName := fmt.Sprintf("tx %d", i+1)
@@ -101,7 +100,7 @@ func TestTransferTX(t *testing.T) {
 
 	updateAccount2, err := testQueries.GetAccount(context.Background(), account2.ID)
 	require.NoError(t, err)
-	fmt.Println(">> after:", updateAccount1.Balance, updateAccount2.Balance)
+
 	require.Equal(t, account1.Balance-int64(n)*amount, updateAccount1.Balance)
 	require.Equal(t, account2.Balance+int64(n)*amount, updateAccount2.Balance)
 
@@ -153,8 +152,7 @@ func TestTransferTXDeadLock(t *testing.T) {
 
 	updateAccount2, err := testQueries.GetAccount(context.Background(), account2.ID)
 	require.NoError(t, err)
-	fmt.Println(">> after:", updateAccount1.Balance, updateAccount2.Balance)
-	//тут убираем
+
 	require.Equal(t, account1.Balance, updateAccount1.Balance)
 	require.Equal(t, account2.Balance, updateAccount2.Balance)
 

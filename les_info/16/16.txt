@@ -1,0 +1,121 @@
+Добавим новые запросы для sql в query/user.sql
+
+-- name: CreateUser :one
+insert into users(
+    username,
+    hashed_password,
+    full_name,
+    email
+) VALUES (
+             $1,$2,$3,$4
+         ) returning *;
+
+
+-- name: GetUser :one
+select * from users
+where username = $1 limit 1;
+
+
+сгенерим код и напишем тесты
+
+func CreateRandomUser(t *testing.T) User {
+	arg := CreateUserParams{
+		Username:       util.RandomOwner(),
+		HashedPassword: "secret",
+		FullName:       util.RandomOwner(),
+		Email:          util.RandomEmail(),
+	}
+
+	user, err := testQueries.CreateUser(context.Background(), arg)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, user)
+
+	require.Equal(t, arg.Username, user.Username)
+	require.Equal(t, arg.HashedPassword, user.HashedPassword)
+	require.Equal(t, arg.FullName, user.FullName)
+	require.Equal(t, arg.Email, user.Email)
+
+	require.True(t, user.PasswordChangedAt.IsZero())
+	require.NotZero(t, user.CreatedAt)
+
+	return user
+}
+
+func TestCreateUser(t *testing.T) {
+	CreateRandomUser(t)
+}
+
+func TestGetUser(t *testing.T) {
+	user1 := CreateRandomUser(t)
+	user2, err := testQueries.GetUser(context.Background(), user1.Username)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, user2)
+
+	require.Equal(t, user1.Username, user2.Username)
+	require.Equal(t, user1.FullName, user2.FullName)
+	require.Equal(t, user1.Email, user2.Email)
+	require.Equal(t, user1.HashedPassword, user2.HashedPassword)
+
+	require.WithinDuration(t, user1.PasswordChangedAt, user2.PasswordChangedAt, time.Second)
+	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
+
+}
+
+Отдельно они будут проходить, но другие тесты будут падать
+
+=== RUN   TestCreateAccounts
+    account_test.go:21:
+        	Error Trace:	/home/mos/Documents/1_backend_course/project/sqlc/account_test.go:21
+        	            				/home/mos/Documents/1_backend_course/project/sqlc/account_test.go:35
+        	Error:      	Received unexpected error:
+        	            	pq: insert or update on table "accounts" violates foreign key constraint "accounts_owner_fkey"
+        	Test:       	TestCreateAccounts
+--- FAIL: TestCreateAccounts (0.06s)
+
+=== RUN   TestGetAccount
+    account_test.go:21:
+        	Error Trace:	/home/mos/Documents/1_backend_course/project/sqlc/account_test.go:21
+        	            				/home/mos/Documents/1_backend_course/project/sqlc/account_test.go:39
+        	Error:      	Received unexpected error:
+        	            	pq: insert or update on table "accounts" violates foreign key constraint "accounts_owner_fkey"
+        	Test:       	TestGetAccount
+--- FAIL: TestGetAccount (0.00s)
+
+из-за
+pq: insert or update on table "accounts" violates foreign key constraint "accounts_owner_fkey
+
+Дело в том, что в тех тестах мы создавали рандомного пользователя, а теперь
+из-за fk ограничений этот тест падает,  т.к. по сути этого пользователя
+не существует, чтобы пофиксить добавим строчку создания пользователя
+в createAccount и вместо случайного имени укажем user.Username
+
+func CreateRandomAccount(t *testing.T) Account {
+	user := CreateRandomUser(t)
+	arg := CreateAccountsParams{
+		Owner:   user.Username,
+		Balance:  util.RandomMoney(),
+		Currency: util.RandomCurrency(),
+	}
+
+Далее нужно не забыть обновить моки
+
+после запускаем сервер и тестируем, для того чтобы создать новый аккаунт,
+достаточно выбрать случайное имя из таблицы users, вставить
+его в поле owner и затем создать аккаунт
+
+curl -X POST localhost:8080/accounts -d \
+ '{"owner": "lkgyhk", "currency": "USD" }'
+
+Также можно отдельно обработать ошибку специфичную для postgres
+преобразовав её в нужный формат
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			log.Println(pqErr.Code.Name())
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+

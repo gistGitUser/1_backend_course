@@ -12,7 +12,8 @@ CREATE TABLE "users" (
 
 чтобы установить новое дефолтное значение в таблицу можно использовать такую запись
 "password_changed_at" timestamptz NOT NULL DEFAULT('0001-01-01 00:00:00+00')
-
+а так можно делать задавать время создания записи
+"created_at" timestamptz NOT NULL DEFAULT (now())
 
 посмотреть какие индексы есть у таблицы
 затем добавляем foreign key
@@ -24,7 +25,7 @@ owner - USD
 owner - EUR
 
 для этого можем создать ограничение, при котором будет сразу создан
-компонентный unizue index
+компонентный unique index
 
 --create create unique index on "accounts" ("owner","currency");
 -- создание такой зависимости автоматически создаёт композитный индекс выше
