@@ -1,0 +1,49 @@
+
+Недостатки jwt в том, что он даёт на выбор слишком
+много алгоритмов, которые не всегда подходят решаемой задачи
+например из-за того, что некоторые используют в микросервисной архитектуре
+симметричные алгоритмы - это может привести к тому, что вся система
+может быть скомпрометирована
+
+известные уязвимости
+
+rsa pkcsv1.5: padding oracle attack
+ECDSA: invalid-curve attack
+
+уязвимость trivial forgery
+
+суть в том что поле alg может быть настроено как none и
+alg установится по умолчанию в hs256 а не нужный нам алгоритм
+(потетстить эту атаку)
+
+* поискать еще возможные проблемы
+
+PASETO - Platform Agnostic SEcurity TOkens
+
+ * stronger algorithm (у разрабов нет выбора)
+   * нужно выбрать версию paseto
+   * каждая версия имеет 1 cipher suite
+   * на данный момент только 2 последние версии пасето будут корректными
+
+ * PASETO шифрует все данные
+ * нельзя поменять данные
+
+практическое использование в го
+и просто общее описание и описание различных версий
+мб некотоыре уязвимости
+
+
+https://paragonie.com/files/talks/NoWayJoseCPV2018.pdf
+https://habr.com/ru/articles/533868/comments/#comment_22440310
+https://assets.sennheiser.com/global-downloads/file/19534/CX200BTTW_Manual_EN.pdf
+https://dev.to/techschoolguru/why-paseto-is-better-than-jwt-for-token-based-authentication-1b0c
+https://jlarky.vercel.app/posts/a-thorough-introduction-to-paseto
+https://www.youtube.com/results?search_query=paseto
+https://github.com/paseto-standard/paseto-spec
+https://jlarky.vercel.app/posts/a-thorough-introduction-to-paseto
+https://habr.com/ru/companies/otus/articles/544778/
+
+
+
+
+
