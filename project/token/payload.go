@@ -32,7 +32,7 @@ func NewPayload(username string, duration time.Duration) (*Payload, error) {
 		ID:       tokenID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now()),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(duration)),
 		},
 	}, err
 
