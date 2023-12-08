@@ -30,9 +30,11 @@ func NewPayload(username string, duration time.Duration) (*Payload, error) {
 	return &Payload{
 		Username: username,
 		ID:       tokenID,
+		//ExpiredAt: time.Now(),
+		//IssuedAt:  time.Now().Add(duration),
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now()),
-			IssuedAt:  jwt.NewNumericDate(time.Now().Add(duration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 		},
 	}, err
 
