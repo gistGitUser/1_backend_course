@@ -2,3 +2,50 @@
 т.к. сервер может поддерживать несколько схем авторизации
 например Bearer и OAuth, поэтому в миддлеваре нужно проверять
 и это
+
+при тестировании API аутентификации есть несколько полезных способов, которые
+повысят надежность тестирования. Для начала нужно создать функцию которая будет
+настраивать подходяющую аутентифакацию для пользователя
+
+func addAuthorization(
+	t *testing.T,
+	request *http.Request,
+	tokenMaker *token.PasetoMaker,
+	authorizationType string,
+	username string,
+	duration time.Duration,
+) {
+	tokenVal, err := tokenMaker.CreateToken(username, duration)
+	require.NoError(t, err)
+	authorizationHeader := fmt.Sprintf("%s %s", authorizationType, tokenVal)
+	request.Header.Set(authHeaderKey, authorizationHeader)
+}
+
+Соотв. добавляем эту функцю в тест кейсы
+
+testCases := []struct {
+		name          string
+		setupAuth     func(t *testing.T, request *http.Request, tokenMaker *token.PasetoMaker)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker *token.PasetoMaker) {
+				addAuthorization(t, request, tokenMaker, authTypeBearer, "user", time.Minute)
+		},
+    }
+
+    Базовые случаи которые стоит проверить представлены ниже
+
+    name: "OK", - всё норм
+    name: "NoAuthorization", - нет заголовка авторизации
+    name: "UnsupportedAuthorization", - неподдерживаемый тип авторизации например Oauth
+    name: "InvalidAuthorizationFormat", - какие проблемы с форматом заголовка, например не хватает полей
+    name: "ExpiredToken", - проблемы с токеном
+
+    Пользовательское апи можно тестировать примерно также
+
+    name:      "OK",
+    name:      "UnauthorizedUser",
+    name:      "NoAuthorization",
+
+

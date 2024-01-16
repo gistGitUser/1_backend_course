@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	db "github.com/gistGitUser/course/project/sqlc"
-	"github.com/gistGitUser/course/project/token"
 	"github.com/lib/pq"
 	"net/http"
 )
@@ -69,9 +68,14 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
-	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
+	authPayload := ctx.MustGet(authPayloadKey).(*paseto.Token)
+	usernamePaseto, err := authPayload.GetString("username")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
 	arg := db.CreateAccountsParams{
-		Owner:    authPayload.Username,
+		Owner:    usernamePaseto,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -99,10 +103,15 @@ func (server *Server) listAccount(ctx *gin.Context) {
 		return
 	}
 
-	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
+	authPayload := ctx.MustGet(authPayloadKey).(*paseto.Token)
+	usernamePaseto, err := authPayload.GetString("username")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
 
 	arg := db.ListAccountsParams{
-		Owner:  authPayload.Username,
+		Owner:  usernamePaseto,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
