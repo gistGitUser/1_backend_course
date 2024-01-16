@@ -41,6 +41,11 @@ func authMiddleWare(maker *token.PasetoMaker) gin.HandlerFunc {
 
 		accessToken := fields[1]
 		payload, err := maker.VerifyToken(accessToken)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
+			return
+		}
+
 		if authType != authTypeBearer {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 			return

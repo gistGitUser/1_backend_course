@@ -1,15 +1,17 @@
 package api
 
 import (
+	"aidanwoods.dev/go-paseto"
 	"database/sql"
+	"errors"
 	"github.com/gin-gonic/gin"
 	db "github.com/gistGitUser/course/project/sqlc"
+	"github.com/gistGitUser/course/project/token"
 	"github.com/lib/pq"
 	"net/http"
 )
 
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
@@ -40,6 +42,19 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authPayloadKey).(*paseto.Token)
+	usernamePaseto, err := authPayload.GetString("username")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+	if account.Owner != usernamePaseto {
+		err = errors.New("account doesn't belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+
+	}
+
 	ctx.JSON(http.StatusOK, account)
 }
 
@@ -54,8 +69,9 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
 	arg := db.CreateAccountsParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -83,7 +99,10 @@ func (server *Server) listAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(authPayloadKey).(*token.Payload)
+
 	arg := db.ListAccountsParams{
+		Owner:  authPayload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
