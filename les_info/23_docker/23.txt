@@ -1,0 +1,7 @@
+//create new branch for feature
+git checkout -b ft/docker
+
+//change some file and after push to new branch ur feature:
+git commit -m "add feature in les 23"
+//choose new branch for pushing
+git push origin ft/docker
