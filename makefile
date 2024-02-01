@@ -1,5 +1,5 @@
 postgres:
-	docker run --name backend_corse_postgres -e POSTGRES_PASSWORD=back -e POSTGRES_USER=back -p 9876:5432 -d postgres:14.8-alpine
+	docker run --name --network bank-network backend_corse_postgres -e POSTGRES_PASSWORD=back -e POSTGRES_USER=back -p 9876:5432 -d postgres:14.8-alpine
 
 postgresstart:
 	docker start backend_corse_postgres

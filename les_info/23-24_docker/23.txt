@@ -1,0 +1,136 @@
+//create new branch for feature
+git checkout -b ft/docker
+
+//change some file and after push to new branch ur feature:
+git commit -m "add feature in les 23"
+//choose new branch for pushing
+git push origin ft/docker
+
+//create new image
+```
+FROM golang:1.20-alpine3.18
+# declare current working directiry inside the image
+WORKDIR /app
+# first point mean that we copy all from current dir
+COPY . .
+
+RUN go build -o project/main project/main.go
+
+EXPOSE 8080
+CMD ["app/project/main"]
+```
+
+run command
+docker build -t simplebank:latest .
+
+but image size to large ~ 600mb
+
+we can user multi-stage build for reduce image size
+
+modify `Docker` file
+
+```
+# BUILD STAGE
+# add AS BUILDER for creating build stage
+FROM golang:1.20-alpine3.18 AS builder
+# declare current working directiry inside the image
+WORKDIR /app
+# first point mean that we copy all from current dir
+COPY . .
+
+RUN go build -o project/main project/main.go
+
+
+# RUN STAGE
+# use alpine linux image
+FROM alpine:3.18
+
+WORKDIR /app
+
+COPY --from=builder /app/project/main .
+
+EXPOSE 8080
+CMD ["app/project/main"]
+```
+
+//and run command
+docker build -t simplebank:latest .
+
+//find our new image
+docker images | grep simple
+//find old image and remove it
+docker images | grep none
+docker rmi bb4558baef41
+
+docker build -t simplebank:latest .
+docker run --name simplebank -p 8080:8080 simplebank:latest
+docker image save simplebank:latest > my-image.tar
+docker rm simplebank
+
+нужно не забыть, что контейнеры разделены и нельзя
+к ним обращаться по localhost
+docker container inspect backend_corse_postgres
+
+ищем NetworkSettings внутри ищем "Networks" и "bridge", если
+ничего не менялось то скорее всего внутри будет что-то типа
+
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.3",
+
+a у simplebank
+
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
+
+т.е. разные ip у разных контейнров, поэтому
+подключаться по локалхосту не получится
+
+
+можно поменять настройки в конфиге, а можно передать
+переменную окружения, при этом нужно будет указать
+внутренний порт подключения к базе(5432) а не внешний (9876)
+
+docker run --name simplebank -p 8080:8080 -e DB_SOURCE="postgresql://back:back@172.17.0.3:5432/back_db?sslmode=disable" simplebank:latest
+
+чтобы увидеть какие есть сети для контейнеров
+
+docker network ls
+
+Для более детальной информации можно использовать
+
+ docker network inspect bridge
+
+ "Containers": {
+            "97e283fd38971c9b53c2be7953d9ce09b4d31c350e02345c34060aa935c000c0": {
+                "Name": "simplebank",
+                "EndpointID": "3c64cc9e55669af6788d1843ecfa9e4f1d5236824e82ca7ecfc6de5cfd1b4459",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "a51b794af09336ad20acc7c979b90fad23d0b22cf14abb2cfe397fe0dbe4c86c": {
+                "Name": "backend_corse_postgres",
+                "EndpointID": "a6939da81edfd48011fbff76da1d35593604db4c2af88d2710110b7bd44375af",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+
+Теперь переместим контейнеры в свою сеть
+
+docker network create bank-network
+
+docker network connect bank-network backend_corse_postgres
+docker network connect bank-network simplebank
+
+после этого добавляем новый флаг network пишем название сети
+а ip в подключении меняем на backend_corse_postgres
+
+docker run --name simplebank --network bank-network -p 8080:8080 -e DB_SOURCE="postgresql://back:back@backend_corse_postgres:5432/back_db?sslmode=disable" simplebank:latest
+
+также обновляем makefile
+
+postgres:
+	docker run --name --network bank-network backend_corse_postgres -e POSTGRES_PASSWORD=back -e POSTGRES_USER=back -p 9876:5432 -d postgres:14.8-alpine
+
