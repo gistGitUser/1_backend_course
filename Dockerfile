@@ -16,6 +16,7 @@ FROM alpine:3.18
 WORKDIR /app
 
 COPY --from=builder /app/project/main .
+COPY project/app.env .
 
 EXPOSE 8080
-CMD ["app/project/main"]
+CMD ["/app/main"]

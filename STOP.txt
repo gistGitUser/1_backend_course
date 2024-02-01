@@ -9,3 +9,10 @@ git
 https://github.com/techschool/simplebank/commits/master?before=6e2679863e4c691db46ec14761a3b3e303e05ce1+105&branch=master&qualified_name=refs%2Fheads%2Fmaster
 
 https://github.com/techschool/simplebank/commit/3081fd82b4fb220b72b7d6164e4498e1f9ddc96a#diff-a26e51bebb41e267f95a42https://www.youtube.com/watch?v=Su6zn1_blw0a40a2ab83831392a1ff7049d34b9ca5024fa224a42
+
+
+docker build -t simplebank:latest .
+docker run --name simplebank -p 8080:8080 simplebank:latest
+docker image save simplebank:latest > my-image.tar
+docker rm simplebank
+
